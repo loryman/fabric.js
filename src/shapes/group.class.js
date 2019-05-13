@@ -557,14 +557,37 @@
    * @param {Function} [callback] Callback to invoke when an group instance is created
    */
   fabric.Group.fromObject = function(object, callback) {
-    fabric.util.enlivenObjects(object.objects, function(enlivenedObjects) {
-      fabric.util.enlivenObjects([object.clipPath], function(enlivedClipPath) {
-        var options = fabric.util.object.clone(object, true);
-        options.clipPath = enlivedClipPath[0];
-        delete options.objects;
-        callback && callback(new fabric.Group(enlivenedObjects, options, true));
+    if (typeof object.objects === 'string') {
+      var pathUrl = object.objects; // object.objects contain url of svg object
+      object.sourcePath = pathUrl;
+      var options = fabric.util.object.clone(object, true);
+      fabric.loadSVGFromURL(pathUrl, function (objects, options) {
+        //if fill of object changed in design
+        if(object.fill!='rgb(0,0,0)'){
+          $j.each(objects, function (index, value) {
+              value.set({'fill':object.fill});
+          });
+        }        //opacity of object is changed in design
+      if(object.opacity!='1'){
+          $j.each(objects, function (index, value) {
+              value.set({'opacity':value.opacity*object.opacity});
+          });
+        }
+
+        var path = fabric.util.groupSVGElements(objects, options);
+        path.setOptions(object);
+        callback && callback(path);
       });
-    });
+    } else {
+      fabric.util.enlivenObjects(object.objects, function(enlivenedObjects) {
+        fabric.util.enlivenObjects([object.clipPath], function(enlivedClipPath) {
+          var options = fabric.util.object.clone(object, true);
+          options.clipPath = enlivedClipPath[0];
+          delete options.objects;
+          callback && callback(new fabric.Group(enlivenedObjects, options, true));
+        });
+      });
+    }
   };
 
 })(typeof exports !== 'undefined' ? exports : this);
